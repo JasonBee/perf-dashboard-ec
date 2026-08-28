@@ -1,5 +1,12 @@
 # Performance Monitor
 
+This tooling exists because we run on shared hosts, where performance varies 
+, and environmental issues are hard to pin down. Without going too deep: we 
+needed a way to attribute slow actions and transactions to specific scripts 
+or processes, and to measure that behaviour over time rather than in one-off 
+snapshots. That history is what speeds up troubleshooting of our CMS products 
+and osTicket performance.
+
 A dependency-free PHP request-timing monitor. Logs every request (timing,
 memory, OPcache hit rate, HTTP status) to daily JSON-lines files, and renders
 an HTML dashboard with response-time trends, slowest endpoints, and live
