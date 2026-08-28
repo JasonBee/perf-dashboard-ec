@@ -295,6 +295,43 @@ return [
      */
     'route_params' => ['page', 'action'],
 
+    /* -----------------------------------------------------------------
+     * SUMMARY CARD COLOR THRESHOLDS  (dashboard only)
+     * -----------------------------------------------------------------
+     * The four summary cards at the top of the dashboard are colored
+     * green / amber / red based on the bands below. Each metric has a
+     * "warn" edge (green -> amber) and a "bad" edge (amber -> red):
+     *
+     *     value <  warn            -> green  (healthy)
+     *     warn  <= value <  bad    -> amber  (worth watching)
+     *     value >= bad             -> red    (problem)
+     *
+     * Tune these to what "slow" / "heavy" means for YOUR site. The
+     * defaults suit a shared-host WordPress/MainWP dashboard.
+
+     * -- Avg response time (ms) -- the typical request. Tight bands,
+     *    because this is an average across every request. */
+    'card_avg_ms_warn' => 500,    // green below 500 ms
+    'card_avg_ms_bad'  => 1500,   // red at/above 1500 ms
+
+    /* -- 95th percentile (ms) -- the slow tail most users still hit.
+     *    Looser than the average, since p95 is expected to run higher. */
+    'card_p95_ms_warn' => 1000,   // green below 1000 ms
+    'card_p95_ms_bad'  => 3000,   // red at/above 3000 ms
+
+    /* -- Slowest single request (ms) -- a single max value, always
+     *    noisy (one cron run or update scan spikes it). Kept loose so
+     *    only genuinely pathological outliers turn red. */
+    'card_max_ms_warn' => 1500,   // green at/below 1500 ms
+    'card_max_ms_bad'  => 4000,   // red above 4000 ms
+
+    /* -- Peak memory -- colored by the MAX observed peak as a PERCENT
+     *    of PHP's memory_limit (not absolute MB, which is meaningless
+     *    without the limit). If memory_limit can't be read, this card
+     *    stays neutral. */
+    'card_mem_pct_warn' => 50,    // green below 50% of memory_limit
+    'card_mem_pct_bad'  => 80,    // red at/above 80% of memory_limit
+
 ];
 PERF_PAYLOAD_EOF
 }
@@ -343,6 +380,28 @@ $minSamples      = (int)($cfg['min_samples'] ?? 3);
 $slowThresholdMs = (int)($cfg['slow_threshold_ms'] ?? 1000);
 $dashboardTitle  = $cfg['dashboard_title']   ?? 'Performance Dashboard';
 $routeParams     = $cfg['route_params']      ?? ['page', 'action'];
+
+// -- Summary card color thresholds (see perf-config.php for full explanation) --
+// Each metric has a warn edge (green->amber) and a bad edge (amber->red):
+//     value <  warn          -> green
+//     warn  <= value <  bad  -> amber
+//     value >= bad           -> red
+$cardAvgWarn  = (float)($cfg['card_avg_ms_warn']  ?? 500);
+$cardAvgBad   = (float)($cfg['card_avg_ms_bad']   ?? 1500);
+$cardP95Warn  = (float)($cfg['card_p95_ms_warn']  ?? 1000);
+$cardP95Bad   = (float)($cfg['card_p95_ms_bad']   ?? 3000);
+$cardMaxWarn  = (float)($cfg['card_max_ms_warn']  ?? 1500);
+$cardMaxBad   = (float)($cfg['card_max_ms_bad']   ?? 4000);
+$cardMemWarn  = (float)($cfg['card_mem_pct_warn'] ?? 50);
+$cardMemBad   = (float)($cfg['card_mem_pct_bad']  ?? 80);
+
+// Map a value to a card color class using its warn/bad edges. Returns
+// 'card-good' | 'card-warn' | 'card-bad'. Higher value = worse.
+$cardClass = function ($value, $warn, $bad) {
+    if ($value >= $bad)  return 'card-bad';
+    if ($value >= $warn) return 'card-warn';
+    return 'card-good';
+};
 
 // Read logs in the SAME timezone they were written in, or requests logged
 // after midnight land in a file this loop won't open.
@@ -491,6 +550,12 @@ if (function_exists('opcache_get_status')) {
 $memLimitBytes = $iniBytes(ini_get('memory_limit'));           // null if unlimited "-1"
 $obsPeakBytes  = $totalRequests ? (max(array_column($rows, 'mem_peak_mb')) * 1048576) : 0;
 
+// Max observed peak as a percent of memory_limit, for the "Avg peak memory"
+// card color. null if the limit is unknown/unlimited -> card stays neutral.
+$memPeakPct = ($memLimitBytes && $obsPeakBytes)
+    ? ($obsPeakBytes / $memLimitBytes) * 100
+    : null;
+
 $loadAvg = null;
 if (function_exists('sys_getloadavg')) {
     $la = @sys_getloadavg();
@@ -533,6 +598,15 @@ if (!empty($cfg['dashboard_title']) && $cfg['dashboard_title'] !== $defaultTitle
   .card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); min-width: 140px; }
   .card .label { font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 0.03em; }
   .card .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  /* Summary card color states (thresholds set in perf-config.php).
+     A colored left border + value tint; card background stays white so
+     the numbers stay legible. green = healthy, amber = watch, red = problem. */
+  .card.card-good { border-left: 4px solid #63991f; }
+  .card.card-good .value { color: #3b6d11; }
+  .card.card-warn { border-left: 4px solid #ba7517; }
+  .card.card-warn .value { color: #854f0b; }
+  .card.card-bad  { border-left: 4px solid #c0392b; }
+  .card.card-bad  .value { color: #a32d2d; }
   .panel { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 24px; }
   .panel h2 { font-size: 15px; margin: 0 0 16px 0; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -570,10 +644,10 @@ if (!empty($cfg['dashboard_title']) && $cfg['dashboard_title'] !== $defaultTitle
 </div>
 
 <div class="cards">
-  <div class="card"><div class="label">Avg response time</div><div class="value"><?= $avgDuration ?> ms</div></div>
-  <div class="card"><div class="label">95th percentile</div><div class="value"><?= $p95 ?> ms</div></div>
-  <div class="card"><div class="label">Slowest single request</div><div class="value"><?= $maxDuration ?> ms</div></div>
-  <div class="card"><div class="label">Avg peak memory</div><div class="value"><?= $avgMemPeak ?> MB</div></div>
+  <div class="card <?= $cardClass($avgDuration, $cardAvgWarn, $cardAvgBad) ?>"><div class="label">Avg response time</div><div class="value"><?= $avgDuration ?> ms</div></div>
+  <div class="card <?= $cardClass($p95, $cardP95Warn, $cardP95Bad) ?>"><div class="label">95th percentile</div><div class="value"><?= $p95 ?> ms</div></div>
+  <div class="card <?= $cardClass($maxDuration, $cardMaxWarn, $cardMaxBad) ?>"><div class="label">Slowest single request</div><div class="value"><?= $maxDuration ?> ms</div></div>
+  <div class="card <?= $memPeakPct === null ? '' : $cardClass($memPeakPct, $cardMemWarn, $cardMemBad) ?>"><div class="label">Avg peak memory</div><div class="value"><?= $avgMemPeak ?> MB</div></div>
 </div>
 
 <?php
@@ -672,6 +746,7 @@ new Chart(document.getElementById('trendChart'), {
 </html>
 PERF_PAYLOAD_EOF
 }
+
 
 # ---- deploy: logger + config ------------------------------------------------
 deploy_file() {  # deploy_file <writer_fn> <dest>

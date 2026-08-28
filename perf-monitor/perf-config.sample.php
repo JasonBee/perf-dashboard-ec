@@ -80,4 +80,41 @@ return [
      */
     'route_params' => ['page', 'action'],
 
+    /* -----------------------------------------------------------------
+     * SUMMARY CARD COLOR THRESHOLDS  (dashboard only)
+     * -----------------------------------------------------------------
+     * The four summary cards at the top of the dashboard are colored
+     * green / amber / red based on the bands below. Each metric has a
+     * "warn" edge (green -> amber) and a "bad" edge (amber -> red):
+     *
+     *     value <  warn            -> green  (healthy)
+     *     warn  <= value <  bad    -> amber  (worth watching)
+     *     value >= bad             -> red    (problem)
+     *
+     * Tune these to what "slow" / "heavy" means for YOUR site. The
+     * defaults suit a shared-host WordPress/MainWP dashboard.
+
+     * -- Avg response time (ms) -- the typical request. Tight bands,
+     *    because this is an average across every request. */
+    'card_avg_ms_warn' => 500,    // green below 500 ms
+    'card_avg_ms_bad'  => 1500,   // red at/above 1500 ms
+
+    /* -- 95th percentile (ms) -- the slow tail most users still hit.
+     *    Looser than the average, since p95 is expected to run higher. */
+    'card_p95_ms_warn' => 1000,   // green below 1000 ms
+    'card_p95_ms_bad'  => 3000,   // red at/above 3000 ms
+
+    /* -- Slowest single request (ms) -- a single max value, always
+     *    noisy (one cron run or update scan spikes it). Kept loose so
+     *    only genuinely pathological outliers turn red. */
+    'card_max_ms_warn' => 1500,   // green at/below 1500 ms
+    'card_max_ms_bad'  => 4000,   // red above 4000 ms
+
+    /* -- Peak memory -- colored by the MAX observed peak as a PERCENT
+     *    of PHP's memory_limit (not absolute MB, which is meaningless
+     *    without the limit). If memory_limit can't be read, this card
+     *    stays neutral. */
+    'card_mem_pct_warn' => 50,    // green below 50% of memory_limit
+    'card_mem_pct_bad'  => 80,    // red at/above 80% of memory_limit
+
 ];
