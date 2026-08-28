@@ -232,6 +232,16 @@ write_perf_config() {
 return [
 
     /* -----------------------------------------------------------------
+     * VERSION  (do NOT change per site — this tracks the code release)
+     * -----------------------------------------------------------------
+     * Displayed in the dashboard footer so a running deployment can be
+     * traced back to a release. This is a property of the code, not a
+     * per-site setting; leave it as shipped. When you cut a new release,
+     * bump it here (and re-sync the installer's embedded copy).
+     */
+    'version' => '1.0.1',
+
+    /* -----------------------------------------------------------------
      * LOG_DIR  (REQUIRED — change per site)
      * -----------------------------------------------------------------
      * Absolute path to the directory where the .jsonl logs are written
@@ -380,6 +390,7 @@ $minSamples      = (int)($cfg['min_samples'] ?? 3);
 $slowThresholdMs = (int)($cfg['slow_threshold_ms'] ?? 1000);
 $dashboardTitle  = $cfg['dashboard_title']   ?? 'Performance Dashboard';
 $routeParams     = $cfg['route_params']      ?? ['page', 'action'];
+$version         = $cfg['version']            ?? 'dev';
 
 // -- Summary card color thresholds (see perf-config.php for full explanation) --
 // Each metric has a warn edge (green->amber) and a bad edge (amber->red):
@@ -616,6 +627,8 @@ if (!empty($cfg['dashboard_title']) && $cfg['dashboard_title'] !== $defaultTitle
   .filters { margin-bottom: 20px; }
   .filters a { margin-right: 8px; padding: 6px 12px; border-radius: 6px; background: #fff; text-decoration: none; color: #333; font-size: 13px; border: 1px solid #ddd; }
   .filters a.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .footer { margin-top: 8px; color: #999; font-size: 12px; text-align: right; }
+  .footer a { color: #999; }
   .chip-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
   .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; background: #fff; border: 1px solid #eee; border-radius: 12px; margin-bottom: 16px; }
   .chip { display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: #f4f5f7; border-radius: 8px; font-size: 12px; color: #555; }
@@ -742,10 +755,14 @@ new Chart(document.getElementById('trendChart'), {
 });
 </script>
 
+<div class="footer">Performance Monitor v<?= htmlspecialchars($version) ?></div>
+
 </body>
 </html>
 PERF_PAYLOAD_EOF
 }
+
+
 
 
 # ---- deploy: logger + config ------------------------------------------------

@@ -17,6 +17,16 @@
 return [
 
     /* -----------------------------------------------------------------
+     * VERSION  (do NOT change per site — this tracks the code release)
+     * -----------------------------------------------------------------
+     * Displayed in the dashboard footer so a running deployment can be
+     * traced back to a release. This is a property of the code, not a
+     * per-site setting; leave it as shipped. When you cut a new release,
+     * bump it here (and re-sync the installer's embedded copy).
+     */
+    'version' => '1.0.1',
+
+    /* -----------------------------------------------------------------
      * LOG_DIR  (REQUIRED — change per site)
      * -----------------------------------------------------------------
      * Absolute path to the directory where the .jsonl logs are written
