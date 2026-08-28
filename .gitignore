@@ -1,0 +1,18 @@
+# Runtime logs (the whole point — never commit request data)
+perf_logs/
+perf_*.jsonl
+*.jsonl
+
+# Auth / secrets
+.htpasswd
+.htpasswd_perf
+.htaccess
+
+# Per-site config with real paths (commit a sample instead)
+perf-config.php
+!perf-config.sample.php
+
+# Editor / OS noise
+.DS_Store
+*.swp
+*.bak
