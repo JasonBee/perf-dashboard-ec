@@ -7,12 +7,31 @@ server/PHP health. No database, no framework, no application code changes.
 
 Built for WordPress/MainWP but works on any PHP site.
 
+- **Zero dependencies** — plain PHP, no Composer, no database, no build step.
+- **No code changes** — hooks in via `auto_prepend_file`; never touches app code.
+- **Per-request logging** — timing, memory delta, peak memory, OPcache hit rate, HTTP status.
+- **HTML dashboard** — response-time trend, slowest endpoints, color-coded summary cards, live server/PHP health chips.
+- **Self-contained installer** — one script, prompts for paths, wires everything up.
+
+**Requirements:** PHP 7.0+ (uses `register_shutdown_function`, `DateTime`). The
+`.user.ini` method needs PHP-FPM or CGI; on mod_php, set `auto_prepend_file` in
+`php.ini` or `.htaccess` instead.
+
+## Screenshots
+
+<a href="images/sample_1.jpg"><img src="images/sample_1.jpg" alt="Dashboard overview: color-coded summary cards and the response-time trend chart" width="700"></a>
+
+<a href="images/sample_2.jpg"><img src="images/sample_2.jpg" alt="Slowest endpoints table, grouped by route" width="700"></a>
+
+<a href="images/sample_3.jpg"><img src="images/sample_3.jpg" alt="Live health and server/PHP environment chips" width="700"></a>
+
 ## What's in the repo
 
 ```
 install-perf-dashboard.sh   <- self-contained installer (embeds all 4 PHP files)
 LICENSE
 README.md
+images/                     <- screenshots used in this README
 perf-monitor/
   perf_start.php            <- logger, loaded via auto_prepend_file
   perf_end.php              <- no-op, kept only for hosts with a global auto_append_file
@@ -111,6 +130,18 @@ ended up, so the two directories don't need to be siblings.
 7. **Verify.** Load a few pages, then check the log dir for
    `perf_YYYY-MM-DD.jsonl`, and open `dashboard.php`. Run
    `php -l perf_start.php` on the server to confirm syntax.
+
+## Configuration
+
+All settings live in `perf-config.php` (copied from `perf-config.sample.php`).
+Key options, each documented inline in the file:
+
+- `log_dir` — where logs are written/read (required).
+- `timezone` — used by both logger and dashboard (default UTC).
+- `min_samples` — min requests before an endpoint appears in the slowest table.
+- `slow_threshold_ms` — endpoints slower than this are highlighted.
+- `route_params` — query keys that identify distinct endpoints (default `page`, `action`).
+- `card_*` thresholds — green/amber/red bands for the four summary cards.
 
 ## Notes
 
